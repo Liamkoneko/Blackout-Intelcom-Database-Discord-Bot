@@ -3,7 +3,7 @@ require('dotenv').config();
 const fs = require("fs");
 
 const guildId = '768086184517173268'
-const { Client } = require('discord.js');
+const { Client, MessageEmbed } = require('discord.js');
 const { waitForDebugger } = require('inspector');
 const { listenerCount } = require('events');
 const client = new Client();
@@ -32,21 +32,87 @@ client.on('ready', async () => {
         },
     })
 
-    client.ws.on('INTERACTION_CREATE', async (interaction) => {
-        const command = interaction.data.name.toLowerCase()
+    await getApp(guildId).commands.post({
+        data: {
+            name: 'schedulemission',
+            description: 'Schedule missions using the bot local storage and embeds.',
+            options: [
+                {
+                    name: 'title',
+                    description: 'The title of the mission',
+                    required: true,
+                    type: 3
+                },
+                {
+                    name: 'time',
+                    description: 'The time when the mission will start',
+                    required: true,
+                    type: 3
+                },
+                {
+                    name: 'personnel',
+                    description: 'The involved factions or personnel in this mission',
+                    required: true,
+                    type: 3
+                },
+                {
+                    name: 'description',
+                    description: 'The mission order / description',
+                    required: true,
+                    type: 3
+                }
+            ]
+        },
+    })
 
+    client.ws.on('INTERACTION_CREATE', async (interaction) => {
+        const { name, options } = interaction.data
+
+        const command = name.toLowerCase()
+
+        const args = {}
+        console.log(options)
+
+        if (options) {
+            for(const option of options) {
+                const { name, value } = option
+                args[name] = value
+            }
+        }
+
+        console.log(args)
+        
         if (command === 'testreply') {
             reply(interaction, 'Reply done, if you see this, the command worked!')
+        } else if (command === 'schedulemission') {
+            const embed = new MessageEmbed()
+            .setColor('#4c4c4c')
+            .setTitle('Mission scheduled!')
+            .setAuthor('TBD')
+            .setDescription('A new mission has been scheduled!')
+            .setTimestamp()
+            .setFooter('BLACKOUT intelCOM ADMINISTRATION SYSTEM')
+            for (const arg in args) {
+                const value = args[arg]
+                embed.addField(arg, value)
+            }
+            message.send(interaction, response)
         }
     })
 
-    const reply = (interaction, response) => {
+    const reply = async (interaction, response) => {
+        let data = {
+            content: response,
+        }
+
+        //Checking embeds here:
+        if (typeof response == 'object') {
+            data = await client.createAPIMessage(interaction, response)
+        }
         client.api.interactions(interaction.id, interaction.token).callback.post({
             data: {
                 type: 4,
-                data: {
-                    content: response,
-                },
+                data,
             },
         })
     }
@@ -90,5 +156,16 @@ client.on('message', (message) => {
         }
     }
 });
+
+const createAPIMessage = async (interaction, content) => {
+    const { data, files } = await APIMessage.create(
+        client.channels.resolve(interaction.channel_id),
+        content
+    )
+    .resolveData()
+    .resolveFiles()
+
+    return { ...data, files }
+}
 
 client.login(process.env.BOT_TOKEN);
