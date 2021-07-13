@@ -36,16 +36,20 @@ client.on('ready', async () => {
         const command = interaction.data.name.toLowerCase()
 
         if (command === 'testreply') {
-            client.api.interactions(interaction.id, interaction.token).callback.post({
-                data: {
-                    type: 4,
-                    data: {
-                        content: 'Reply sent, if you received this, the operation was done successfully!',
-                    },
-                },
-            })
+            reply(interaction, 'Reply done, if you see this, the command worked!')
         }
     })
+
+    const reply = (interaction, response) => {
+        client.api.interactions(interaction.id, interaction.token).callback.post({
+            data: {
+                type: 4,
+                data: {
+                    content: response,
+                },
+            },
+        })
+    }
 });
 
 client.on('message', (message) => {
