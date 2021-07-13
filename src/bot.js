@@ -2,16 +2,50 @@ require('dotenv').config();
 
 const fs = require("fs");
 
+const guildId = '768086184517173268'
 const { Client } = require('discord.js');
 const { waitForDebugger } = require('inspector');
+const { listenerCount } = require('events');
 const client = new Client();
-const prefix = "BIC//";
+const prefix = "/";
 
-client.on('ready', () => {
+const getApp = (guildId) => {
+    const app = client.api.applications(client.user.id)
+    if (guildId) {
+        app.guilds(guildId)
+    }
+    return app
+}
+
+client.on('ready', async () => {
     console.log('Bot logged in!')
     console.log(`Current bot username is: ${client.user.username}`)
     console.log(`Current bot tag is: ${client.user.tag}`)
     console.log(`Current bot ID is: ${client.user.id}`)
+    const commands = await getApp(guildId).commands.get()
+    console.log(commands)
+
+    await getApp(guildId).commands.post({
+        data: {
+            name: 'testreply',
+            description: 'A simple reply command',
+        },
+    })
+
+    client.ws.on('INTERACTION_CREATE', async (interaction) => {
+        const command = interaction.data.name.toLowerCase()
+
+        if (command === 'testreply') {
+            client.api.interactions(interaction.id, interaction.token).callback.post({
+                data: {
+                    type: 4,
+                    data: {
+                        content: 'Reply sent, if you received this, the operation was done successfully!',
+                    },
+                },
+            })
+        }
+    })
 });
 
 client.on('message', (message) => {
